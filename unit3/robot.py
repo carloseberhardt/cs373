@@ -1,14 +1,3 @@
-# Make a robot called myrobot that starts at
-# coordinates 30, 50 heading north (pi/2).
-# Have your robot turn clockwise by pi/2, move
-# 15 m, and sense. Then have it turn clockwise
-# by pi/2 again, move 10 m, and sense again.
-#
-# Your program should print out the result of
-# your two sense measurements.
-#
-# Don't modify the code below. Please enter
-# your code at the bottom.
 
 from math import *
 import random
@@ -17,7 +6,6 @@ import random
 
 landmarks  = [[20.0, 20.0], [80.0, 80.0], [20.0, 80.0], [80.0, 20.0]]
 world_size = 100.0
-
 
 class robot:
     def __init__(self):
@@ -110,23 +98,74 @@ def eval(r, p):
         sum += err
     return sum / float(len(p))
 
+#myrobot = robot()
+#myrobot.set_noise(5.0, 0.1, 5.0)
+#myrobot.set(30.0, 50.0, pi/2)
+#myrobot = myrobot.move(-pi/2, 15.0)
+#print myrobot.sense()
+#myrobot = myrobot.move(-pi/2, 10.0)
+#print myrobot.sense()
 
+####   DON'T MODIFY ANYTHING ABOVE HERE! ENTER/MODIFY CODE BELOW ####
 
-####   DON'T MODIFY ANYTHING ABOVE HERE! ENTER CODE BELOW ####
-# coordinates 30, 50 heading north (pi/2).
-# Have your robot turn clockwise by pi/2, move
-# 15 m, and sense. Then have it turn clockwise
-# by pi/2 again, move 10 m, and sense again.
-#
-# Your program should print out the result of
-# your two sense measurements.
+def weightedchoice(particles, weights):
+    n = random.random()
+    for particle, weight in zip(particles, weights):
+        if n < weight:
+            break
+        n = n - weight
+    return particle 
+
+def pfilter(particles, weights):
+    p = particles
+    w = weights
+    N = len(p)
+    p3 = []
+    wmax = max(w)
+    B = 0.0
+    idx = random.choice(range(N))
+    for i in range(N):
+        B += random.uniform(0, 2*wmax)
+        while w[idx] < B:
+            B -= w[idx]
+            idx += 1
+            if idx == N: idx = 0 ## prev 2 lines could be idx = (idx+1) % N
+        p3.append(p[idx])
+    return p3
+
+def eval(r, p):
+    sum = 0.0;
+    for i in range(len(p)): # calculate mean error
+        dx = (p[i].x - r.x + (world_size/2.0)) % world_size - (world_size/2.0)
+        dy = (p[i].y - r.y + (world_size/2.0)) % world_size - (world_size/2.0)
+        err = sqrt(dx * dx + dy * dy)
+        sum += err
+    return sum / float(len(p))
 
 myrobot = robot()
-myrobot.set(30., 50., pi/2)
-myrobot.set_noise(5.0, 0.1, 5.0)
-myrobot = myrobot.move(-1*pi/2, 15.0)
-print myrobot.sense()
-myrobot = myrobot.move(-1*pi/2, 10.0)
-print myrobot.sense()
 
+N = 1
+p = []
+for i in range(N):
+    x = robot()
+    x.set_noise(.05,.05,5.)
+    p.append(x)
 
+print "random: ", eval(myrobot, p)
+
+T = 10
+for t in range(T):
+    myrobot = myrobot.move(.1, 5.)
+    print "robot move", myrobot
+    Z = myrobot.sense()
+    print "robot sense", Z
+
+    p = [r.move(.1, 5.0) for r in p]
+
+    w = [part.measurement_prob(Z) for part in p]
+    w = [x/sum(w) for x in w]
+
+    p = pfilter(p,w)
+    print "p", p
+
+    print eval(myrobot, p)
